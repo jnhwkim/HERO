@@ -1,0 +1,146 @@
+{
+    "txt_db": "/mnt/prj/data/txt_db",
+    "img_db": "/mnt/prj/data/video_db",
+    "targets": [
+        {
+            "name": "tv",
+            "sub_txt_db": "tv_subtitles.db",
+            "vfeat_db": "tv",
+            "vfeat_interval": 1.5,
+            "splits": [
+                {
+                    "name": "all",
+                    "tasks": ["mlm", "mfm-nce", "fom", "vsm"],
+                    "train_idx": "tv_pretrain_splits/tv_train.json",
+                    "val_idx": "tv_pretrain_splits/tv_val.json",
+                    "ratio": [
+                        2,
+                        2,
+                        1,
+                        2
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "ht100_full_filtered",
+            "sub_txt_db": "howto100m_pretrain_all_60s_clip_sub.db",
+            "vfeat_db": "howto100m_pretrain_all_60s_clips",
+            "vfeat_shards": [
+                "howto100m_pretrain_all_clips_8",
+                "howto100m_pretrain_all_clips_0",
+                "howto100m_pretrain_all_clips_1",
+                "howto100m_pretrain_all_clips_2",
+                "howto100m_pretrain_all_clips_3",
+                "howto100m_pretrain_all_clips_4",
+                "howto100m_pretrain_all_clips_5",
+                "howto100m_pretrain_all_clips_6",
+                "howto100m_pretrain_all_clips_7",
+                "howto100m_pretrain_all_clips_9"
+            ],
+            "vfeat_interval": 2.0,
+            "splits": [
+                {
+                    "name": "all",
+                    "tasks": [
+                        "mfm-nce",
+                        "fom"
+                    ],
+                    "train_idx": [
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_8.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_0.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_1.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_2.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_3.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_4.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_5.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_6.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_7.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_9.json"
+                    ],
+                    "val_idx": "howto100_full_pretrain_split/ht100_full_filtered_val.json",
+                    "ratio": [
+                        2,
+                        1
+                    ]
+                },
+                {
+                    "name": "has-sub",
+                    "tasks": [
+                        "mlm",
+                        "vsm"
+                    ],
+                    "train_idx": [
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_8.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_0.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_1.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_2.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_3.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_4.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_5.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_6.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_7.json",
+                        "howto100_full_pretrain_split/ht100_full_filtered_train_9.json"
+                    ],
+                    "val_idx": "howto100_full_pretrain_split/ht100_full_filtered_val.json",
+                    "ratio": [
+                        2,
+                        2
+                    ]
+                }
+            ]
+        }
+    ],
+    "targets_ratio": [
+        1,
+        9
+    ],
+    "mask_prob": 0.15,
+    "compressed_db": false,
+    "model_config": "config/hero_pretrain.json",
+    "checkpoint": "/mnt/prj/data/pretrained/pretrain-tv-init.bin",
+    "load_partial_pretrained": true,
+    "skip_layer_loading": true,
+    "output_dir": "/mnt/prj/data/pretrained/pretrain_tv_ht100-full_1650kstep-bs32-1wkr",
+    "max_clip_len": 100,
+    "max_txt_len": 60,
+    "vfeat_version": "resnet_slowfast",
+    "drop_svmr_prob": 0.8,
+    "train_batch_size": 32,
+    "val_batch_size": 32,
+    "gradient_accumulation_steps": 2,
+    "learning_rate": 3e-05,
+    "valid_steps": 5000,
+    "save_steps": 500,
+    "num_train_steps": 1650000,
+    "optim": "adamw",
+    "betas": [
+        0.9,
+        0.98
+    ],
+    "dropout": 0.1,
+    "weight_decay": 0.01,
+    "grad_norm": 1.0,
+    "warmup_steps": 10000,
+    "lw_neg_q": 8.0,
+    "lw_neg_ctx": 8.0,
+    "lw_st_ed": 0.01,
+    "ranking_loss_type": "hinge",
+    "margin": 0.1,
+    "hard_pool_size": [
+        20
+    ],
+    "hard_neg_weights": [
+        10
+    ],
+    "hard_negtiave_start_step": [
+        20000
+    ],
+    "train_span_start_step": 0,
+    "sub_ctx_len": 0,
+    "use_all_neg": true,
+    "seed": 77,
+    "fp16": true,
+    "n_workers": 1,
+    "pin_mem": true
+}

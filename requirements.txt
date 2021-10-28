@@ -1,0 +1,7 @@
+horovod
+lz4
+toolz
+msgpack
+msgpack_numpy
+cytoolz
+tensorboardX
