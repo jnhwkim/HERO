@@ -142,3 +142,23 @@ class PrefetchLoader(object):
     def __getattr__(self, name):
         method = self.loader.__getattribute__(name)
         return method
+
+
+class NonPrefetchLoader(object):
+    """
+    overlap compute and cuda data transfer
+    (copied and then modified from nvidia apex)
+    """
+    def __init__(self, loader):
+        self.loader = loader
+
+    def __iter__(self):
+        for b in self.loader:
+            yield move_to_cuda(b)
+
+    def __len__(self):
+        return len(self.loader)
+
+    def __getattr__(self, name):
+        method = self.loader.__getattribute__(name)
+        return method
