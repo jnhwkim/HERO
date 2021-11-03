@@ -229,8 +229,14 @@ class SubTokLmdb(TxtTokLmdb):
                 self.vid2idx[key] = {k: v[1] for k, v in info.items()}
         # else:
         #     raise ValueError(f"vid2dur_idx.json does not exists in {db_dir}")
-        self.vid_sub2frame, self.vid2vonly_frames =\
-            self.compute_sub2frames()
+        subtitles_file = f'{db_dir}/subtitles.pth'
+        if os.path.exists(subtitles_file):
+            self.vid_sub2frame, self.vid2vonly_frames = torch.load(subtitles_file)
+        else:
+            self.vid_sub2frame, self.vid2vonly_frames =\
+                self.compute_sub2frames()
+            torch.save((self.vid_sub2frame, 
+                        self.vid2vonly_frames), subtitles_file)
 
     def compute_sub2frames(self):
         vid_sub2frame = {}
