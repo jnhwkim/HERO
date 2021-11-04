@@ -71,7 +71,11 @@ class HeroForPretraining(HeroModel):
 
             q2video_scores, st_prob, ed_prob = None, None, None
             if self.lw_st_ed != 0:
-                prob = random.random()
+                # make sure all process is training same prob
+                prob = torch.tensor(random.random())
+                hvd.broadcast_(prob, root_rank=0)
+                prob = prob.data
+                # print(f"rank {hvd.local_rank()} has a probability of {str(prob)}")
                 if prob > self.drop_svmr_prob or not self.training:
                     st_prob, ed_prob = self.get_pred_from_mod_query(
                         frame_embeddings, batch['c_attn_masks'],
