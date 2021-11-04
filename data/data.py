@@ -53,7 +53,7 @@ class VideoFeatLmdb(object):
     def __init__(self, img_dir, feat_version="resnet_slowfast",
                  frame_interval=1.5, compress=True, max_clip_len=-1):
         self.img_dir = img_dir
-        db_name = f'{feat_version}_{frame_interval}'
+        self.db_name = f'{feat_version}_{frame_interval}'
         self.name2nframe = json.load(
             open(f'{img_dir}/'
                  f'id2nframe.json', "r"))
@@ -64,16 +64,24 @@ class VideoFeatLmdb(object):
         self.compress = compress
         self.max_clip_len = max_clip_len
         if compress:
-            db_name += '_compressed'
+            self.db_name += '_compressed'
+        self._open_lmdb()
 
+    def _open_lmdb(self):
         # only read ahead on single node training
-        self.env = lmdb.open(f'{img_dir}/{db_name}',
-                             readonly=True, create=False,
-                             max_readers=4096 * 8,
-                             readahead=False)
+        self.env = lmdb.open(f'{self.img_dir}/{self.db_name}',
+                        readonly=True, create=False,
+                        max_readers=4096 * 8,
+                        readahead=False)
         self.txn = self.env.begin(buffers=True)
         if self.name2nframe is None:
             self.name2nframe = self._compute_nframe()
+
+    def __getstate__(self):
+        state = self.__dict__
+        state['txn'] = None
+        state['env'] = None
+        return state
 
     def _compute_nframe(self):
         name2nframe = {}
@@ -133,7 +141,11 @@ def open_lmdb(db_dir, readonly=False):
 
 class TxtLmdb(object):
     def __init__(self, db_dir, readonly=True):
+        self.db_dir = db_dir
         self.readonly = readonly
+        self._open_lmdb(self.db_dir, self.readonly)
+
+    def _open_lmdb(self, db_dir, readonly):
         if readonly:
             # training
             self.env = lmdb.open(db_dir,
@@ -148,6 +160,12 @@ class TxtLmdb(object):
                                  map_size=4 * 1024**4)
             self.txn = self.env.begin(write=True)
             self.write_cnt = 0
+
+    def __getstate__(self):
+        state = self.__dict__
+        state['txn'] = None
+        state['env'] = None
+        return state
 
     def __del__(self):
         if self.write_cnt:
@@ -175,7 +193,6 @@ class TxtLmdb(object):
 class TxtTokLmdb(object):
     def __init__(self, db_dir, max_txt_len=60):
         self.db_dir = db_dir
-        self.db = TxtLmdb(db_dir, readonly=True)
         meta = json.load(open(f'{db_dir}/meta.json', 'r'))
         self.cls_ = meta['CLS']
         self.eos = meta['EOS']
@@ -184,6 +201,7 @@ class TxtTokLmdb(object):
         self.sep = meta['SEP']
         self.mask = meta['MASK']
         self.v_range = meta['v_range']
+        self.db = TxtLmdb(db_dir, readonly=True)
         id2len_path = f'{db_dir}/id2len.json'
         if os.path.exists(id2len_path):
             if max_txt_len == -1:

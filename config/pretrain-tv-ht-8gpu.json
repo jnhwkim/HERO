@@ -141,6 +141,6 @@
     "use_all_neg": true,
     "seed": 77,
     "fp16": true,
-    "n_workers": 0,
+    "n_workers": 1,
     "pin_mem": true
 }
