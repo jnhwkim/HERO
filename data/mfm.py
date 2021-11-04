@@ -60,7 +60,7 @@ class MfmDataset(Dataset):
 
         c_frame_mask = _get_img_mask(self.mask_prob, c_v_feats.size(0))
         frame_masks = []
-        for i, frames in sub2frames:
+        for j, frames in sub2frames:
             if len(frames):
                 frame_masks.append(
                     c_frame_mask.index_select(0, torch.tensor(frames)))
