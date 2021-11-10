@@ -143,7 +143,8 @@ def build_target_loaders(target, tgt_ratio, opts):
                                       batch_size=opts.train_batch_size,
                                       num_workers=opts.n_workers,
                                       pin_memory=opts.pin_mem,
-                                      collate_fn=train_collate, shuffle=True)
+                                      collate_fn=train_collate, shuffle=True,
+                                      multiprocessing_context='forkserver')
             val_loader = DataLoader(val_dset, batch_size=opts.val_batch_size,
                                     num_workers=opts.n_workers,
                                     pin_memory=opts.pin_mem,
@@ -404,7 +405,7 @@ def validate(model, val_dataloaders, opts):
         val_log = {f'{task}_{k}': v for k, v in val_log.items()}
         TB_LOGGER.log_scaler_dict(
             {f'valid_{task}/{k}': v for k, v in val_log.items()})
-    torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
     model.train()
 
 

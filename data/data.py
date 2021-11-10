@@ -83,6 +83,11 @@ class VideoFeatLmdb(object):
         state['env'] = None
         return state
 
+    def __setstate__(self, state):
+        self.__dict__ = state
+        if not hasattr(self, 'txn') or (hasattr(self, 'txn') and self.txn is None):
+            self._open_lmdb()
+
     def _compute_nframe(self):
         name2nframe = {}
         fnames = json.loads(self.txn.get(key=b'__keys__').decode('utf-8'))
@@ -102,7 +107,8 @@ class VideoFeatLmdb(object):
         return name2nframe
 
     def __del__(self):
-        self.env.close()
+        if hasattr(self, 'env') and self.env is not None:
+            self.env.close()
 
     def get_dump(self, file_name):
         dump = self.txn.get(file_name.encode('utf-8'))
@@ -143,12 +149,12 @@ class TxtLmdb(object):
     def __init__(self, db_dir, readonly=True):
         self.db_dir = db_dir
         self.readonly = readonly
-        self._open_lmdb(self.db_dir, self.readonly)
+        self._open_lmdb()
 
-    def _open_lmdb(self, db_dir, readonly):
-        if readonly:
+    def _open_lmdb(self):
+        if self.readonly:
             # training
-            self.env = lmdb.open(db_dir,
+            self.env = lmdb.open(self.db_dir,
                                  readonly=True, create=False,
                                  max_readers=4096,
                                  readahead=False)
@@ -156,7 +162,7 @@ class TxtLmdb(object):
             self.write_cnt = None
         else:
             # prepro
-            self.env = lmdb.open(db_dir, readonly=False, create=True,
+            self.env = lmdb.open(self.db_dir, readonly=False, create=True,
                                  map_size=4 * 1024**4)
             self.txn = self.env.begin(write=True)
             self.write_cnt = 0
@@ -167,16 +173,33 @@ class TxtLmdb(object):
         state['env'] = None
         return state
 
+    def __setstate__(self, state):
+        self.__dict__ = state
+        if not hasattr(self, 'txn') or (hasattr(self, 'txn') and self.txn is None):
+            self._open_lmdb()
+
     def __del__(self):
-        if self.write_cnt:
+        if hasattr(self, 'write_cnt') and self.write_cnt is not None and \
+            0 < self.write_cnt:
             self.txn.commit()
-        self.env.close()
+        if hasattr(self, 'env') and self.env is not None:
+            self.env.close()
 
     def __getitem__(self, key):
-        return msgpack.loads(decompress(self.txn.get(key.encode('utf-8'))),
-                             raw=False)
+        if isinstance(key, int):
+            key = str(key)
+        value = self.txn.get(key.encode('utf-8'))
+        
+        if value is None:
+            raise KeyError()
+
+        return msgpack.loads(decompress(value), raw=False)
+
 
     def __setitem__(self, key, value):
+        if isinstance(key, int):
+            key = str(key)
+
         # NOTE: not thread safe
         if self.readonly:
             raise ValueError('readonly text DB')
@@ -184,10 +207,13 @@ class TxtLmdb(object):
                            compress(msgpack.dumps(value, use_bin_type=True)))
         self.write_cnt += 1
         if self.write_cnt % 1000 == 0:
-            self.txn.commit()
-            self.txn = self.env.begin(write=True)
-            self.write_cnt = 0
+            self.commit()
         return ret
+
+    def commit(self):
+        self.txn.commit()
+        self.txn = self.env.begin(write=True)
+        self.write_cnt = 0
 
 
 class TxtTokLmdb(object):
@@ -247,18 +273,21 @@ class SubTokLmdb(TxtTokLmdb):
                 self.vid2idx[key] = {k: v[1] for k, v in info.items()}
         # else:
         #     raise ValueError(f"vid2dur_idx.json does not exists in {db_dir}")
-        subtitles_file = f'{db_dir}/subtitles.pth'
-        if os.path.exists(subtitles_file):
-            self.vid_sub2frame, self.vid2vonly_frames = torch.load(subtitles_file)
-        else:
-            self.vid_sub2frame, self.vid2vonly_frames =\
-                self.compute_sub2frames()
-            torch.save((self.vid_sub2frame, 
-                        self.vid2vonly_frames), subtitles_file)
+        subtitles_file = f'{db_dir}/vid2vonly_frames.db'
+        if 0 == hvd.local_rank() and not os.path.exists(subtitles_file):
+            print('make lmdb for subtitles ...')
+            self.vid_sub2frame, self.vid2vonly_frames = self.compute_sub2frames()
+            del self.vid_sub2frame
+            del self.vid2vonly_frames
+            print('\ndone.')
+        # above process would take longer than 60 seconds for howto100m
+        # all_gather_list(None)   # sync with rank-0 & reload/load lmdb
+        self.vid_sub2frame = TxtLmdb(f'{self.db_dir}/vid_sub2frame.db')
+        self.vid2vonly_frames = TxtLmdb(f'{self.db_dir}/vid2vonly_frames.db')
 
     def compute_sub2frames(self):
-        vid_sub2frame = {}
-        vid2vonly_frames = {}
+        vid_sub2frame = TxtLmdb(f'{self.db_dir}/vid_sub2frame.db', readonly=False)
+        vid2vonly_frames = TxtLmdb(f'{self.db_dir}/vid2vonly_frames.db', readonly=False)
         for vid in tqdm(list(self.id2len.keys()), desc='reading subtitles'):
             ex = self.db[vid]
             if 'unmatched_frames' not in ex:
