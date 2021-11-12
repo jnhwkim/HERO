@@ -213,6 +213,12 @@ class TxtLmdb(object):
             self.commit()
         return ret
 
+    def __len__(self):
+        if hasattr(self, 'txn') and self.txn is not None:
+            return self.txn.stat()['entries']
+        else:
+            return -1
+
     def commit(self):
         self.txn.commit()
         self.txn = self.env.begin(write=True)
