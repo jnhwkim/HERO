@@ -293,6 +293,10 @@ class SubTokLmdb(TxtTokLmdb):
         # all_gather_list(None)   # sync with rank-0 & reload/load lmdb
         self.vid_sub2frame = TxtLmdb(f'{self.db_dir}/vid_sub2frame.db')
         self.vid2vonly_frames = TxtLmdb(f'{self.db_dir}/vid2vonly_frames.db')
+        if 0 == hvd.local_rank():
+            print(f'# keys (json): {len(self.id2len)}')
+            print(f'# keys (vid_sub2frame): {len(self.vid_sub2frame)}')
+            print(f'# keys (vid2vonly_frames): {len(self.vid2vonly_frames)}')
 
     def compute_sub2frames(self):
         vid_sub2frame = TxtLmdb(f'{self.db_dir}/vid_sub2frame.db', readonly=False)
