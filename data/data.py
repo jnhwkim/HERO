@@ -23,6 +23,9 @@ import msgpack
 import msgpack_numpy
 msgpack_numpy.patch()
 
+from utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
+                               broadcast_tensors)
+
 
 def _fp16_to_fp32(feat_dict):
     out = {k: arr.astype(np.float32)
