@@ -400,7 +400,7 @@ class VideoFeatSubTokDataset(Dataset):
         self.max_txt_len = max_txt_len
         assert self.txt_db.max_clip_len == self.img_db.max_clip_len
         self.max_clip_len = self.img_db.max_clip_len
-        self.clip_lens, self.vids = get_ids_and_lens(txt_db)  # num.frames, vid
+        # self.clip_lens, self.vids = get_ids_and_lens(txt_db)  # num.frames, vid
         self.vid_sub2frame, self.vid2vonly_frames =\
             self.txt_db.vid_sub2frame, self.txt_db.vid2vonly_frames
         self.vid2dur = self.txt_db.vid2dur
@@ -409,7 +409,7 @@ class VideoFeatSubTokDataset(Dataset):
         assert self.sub_ctx_len >= 0
 
     def __len__(self):
-        return len(self.vids)
+        return len(self.txt_db.id2len)
 
     def __getitem__(self, vid_):
         '''
