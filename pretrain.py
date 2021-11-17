@@ -26,6 +26,7 @@ from data import (SubTokLmdb,
                   FomDataset, fom_collate,
                   FomEvalDataset, fom_eval_collate,
                   PrefetchLoader, MetaLoader)
+from data.loader import NonPrefetchLoader, recursive_del
 from model.model import VideoModelConfig
 from model.pretrain import HeroForPretraining
 from optim import get_lr_sched
