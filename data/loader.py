@@ -86,6 +86,19 @@ def record_cuda_stream(batch):
         pass
 
 
+def recursive_del(batch):
+    if isinstance(batch, list) or isinstance(batch, tuple):
+        for t in batch:
+            recursive_del(t)
+        del batch
+    elif isinstance(batch, dict):
+        for n, t in batch.items():
+            recursive_del(t)
+        del batch
+    else:
+        del batch
+
+
 class PrefetchLoader(object):
     """
     overlap compute and cuda data transfer

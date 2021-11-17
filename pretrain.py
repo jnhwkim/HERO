@@ -292,6 +292,8 @@ def main(opts):
         n_examples[task] += opts.train_batch_size
 
         loss = model(batch, task=train_task, compute_loss=True)
+        recursive_del(batch)  # release cpu memory
+
         if train_task == 'vsm':
             loss_st_ed, loss_neg_ctx, loss_neg_q = loss
             loss = loss_st_ed + loss_neg_ctx + loss_neg_q
@@ -425,6 +427,7 @@ def validate_vsm(model, val_loader, opts):
 
         loss_st_ed, loss_neg_ctx, loss_neg_q =\
             model(batch, 'vsm', compute_loss=True)
+        recursive_del(batch)  # release cpu memory
 
         val_loss_st_ed += loss_st_ed.item()
         if opts.lw_neg_ctx != 0 or opts.lw_neg_q != 0:
@@ -472,6 +475,7 @@ def validate_mlm(model, val_loader):
     for i, batch in enumerate(val_loader):
         scores = model(batch, task='mlm', compute_loss=False)
         labels = batch['txt_labels']
+        recursive_del(batch)  # release cpu memory
         loss = F.cross_entropy(scores, labels, reduction='sum')
         val_loss += loss.item()
         n_correct += (scores.max(dim=-1)[1] == labels).sum().item()
@@ -505,6 +509,7 @@ def validate_mffr(model, val_loader):
         val_loss += loss.sum().item()
         cosine += F.cosine_similarity(pred_feat, targets, dim=-1).sum().item()
         n_feat += batch['c_v_masks'].sum().item()
+        recursive_del(batch)  # release cpu memory
     val_loss = sum(all_gather_list(val_loss))
     cosine = sum(all_gather_list(cosine))
     n_feat = sum(all_gather_list(n_feat))
@@ -531,6 +536,7 @@ def validate_mfm_nce(model, val_loader):
     for i, batch in enumerate(val_loader):
         feats, neg_feats = model(batch, task='mfm-nce', compute_loss=False)
         pos_feats = batch['feat_targets']
+        recursive_del(batch)  # release cpu memory
         logits = model.v_encoder.mfm_nce(feats, pos_feats, neg_feats,
                                          compute_loss=False)
         targets = torch.arange(0, logits.size(0),
@@ -577,10 +583,9 @@ def validate_fom(model, val_loader):
         targets = batch['targets']
         batch_size, seq_len = targets.size()
         vids = batch['vids']
-        del batch['targets']
-        del batch['vids']
 
         scores = model(batch, task='fom', compute_loss=False)
+        recursive_del(batch)  # release cpu memory
 
         targets_valid = targets.view(scores.shape[0], )
         loc = (targets_valid != -1).nonzero().squeeze()
