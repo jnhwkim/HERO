@@ -8,6 +8,7 @@ from collections import defaultdict
 import json
 from os.path import join
 from time import time
+import os
 
 import torch
 from torch.nn import functional as F
@@ -39,6 +40,7 @@ from utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
                                broadcast_tensors)
 from utils.save import ModelSaver, save_training_meta, TrainingRestorer
 from utils.misc import NoOp, set_dropout, set_random_seed
+from utils.misc import TensorBackedImmutableStringArray
 from utils.const import VFEAT_DIM, MAX_FRM_SEQ_LEN
 from config.config import shared_configs
 from load_data import load_video_sub_dataset
@@ -70,14 +72,33 @@ def build_target_loaders(target, tgt_ratio, opts):
             LOGGER.info(f'loading {name} ...')
             ratio = tgt_ratio * r
             if isinstance(video_db, list):
-                all_train_ids = [
-                    json.load(open(f"{opts.txt_db}/{ids}"))
-                    for ids in split['train_idx']
-                ]
+                pth_filename = f"{opts.txt_db}/{split['train_idx'][0]}.pth"
+                if os.path.exists(pth_filename):
+                    all_train_ids = torch.load(pth_filename)
+                else:
+                    all_train_ids = [
+                        json.load(open(f"{opts.txt_db}/{ids}"))
+                        for ids in split['train_idx']
+                    ]
+                    all_train_ids = [TensorBackedImmutableStringArray(train_ids) \
+                        for train_ids in all_train_ids]
+                    torch.save(all_train_ids, pth_filename)
             else:
-                train_ids = json.load(
-                    open(f"{opts.txt_db}/{split['train_idx']}"))
-            val_ids = json.load(open(f"{opts.txt_db}/{split['val_idx']}"))
+                pth_filename = f"{opts.txt_db}/{split['train_idx']}.pth"
+                if os.path.exists(pth_filename):
+                    train_ids = torch.load(pth_filename)
+                else:
+                    train_ids = json.load(
+                        open(f"{opts.txt_db}/{split['train_idx']}"))
+                    train_ids = TensorBackedImmutableStringArray(train_ids)
+                    torch.save(train_ids, pth_filename)
+            pth_filename = f"{opts.txt_db}/{split['val_idx']}.pth"
+            if os.path.exists(pth_filename):
+                val_ids = torch.load(pth_filename)
+            else:
+                val_ids = json.load(open(f"{opts.txt_db}/{split['val_idx']}"))
+                val_ids = TensorBackedImmutableStringArray(val_ids)
+                torch.save(val_ids, pth_filename)
             if task == 'mlm':
                 if isinstance(video_db, list):
                     train_dset = ConcatDataset([
