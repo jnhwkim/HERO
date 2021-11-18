@@ -13,6 +13,7 @@ import torch
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data.distributed import DistributedSampler
 
 from apex import amp
 from horovod import torch as hvd
@@ -27,6 +28,7 @@ from data import (SubTokLmdb,
                   FomEvalDataset, fom_eval_collate,
                   PrefetchLoader, MetaLoader)
 from data.loader import NonPrefetchLoader, recursive_del
+from data.data import _check_ngpu
 from model.model import VideoModelConfig
 from model.pretrain import HeroForPretraining
 from optim import get_lr_sched
@@ -140,16 +142,22 @@ def build_target_loaders(target, tgt_ratio, opts):
                 val_collate = vsm_collate
             else:
                 raise ValueError(f'undefined task {task}')
+            train_sampler = DistributedSampler(train_dset, hvd.size(), 
+                hvd.rank(), shuffle=True) if _check_ngpu() > 1 else None
             train_loader = DataLoader(train_dset,
                                       batch_size=opts.train_batch_size,
                                       num_workers=opts.n_workers,
                                       pin_memory=opts.pin_mem,
-                                      collate_fn=train_collate, shuffle=True,
+                                      collate_fn=train_collate,
+                                      sampler=train_sampler,
                                       multiprocessing_context='forkserver')
+            val_sampler = DistributedSampler(val_dset, hvd.size(), 
+                hvd.rank(), shuffle=False) if _check_ngpu() > 1 else None
             val_loader = DataLoader(val_dset, batch_size=opts.val_batch_size,
                                     num_workers=opts.n_workers,
                                     pin_memory=opts.pin_mem,
-                                    collate_fn=val_collate, shuffle=False,
+                                    collate_fn=val_collate,
+                                    sampler=val_sampler,
                                     multiprocessing_context='forkserver')
             train_loaders[name] = (train_loader, ratio)
             val_loaders[name] = PrefetchLoader(val_loader)

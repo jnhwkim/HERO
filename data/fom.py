@@ -19,10 +19,7 @@ class FomDataset(Dataset):
     def __init__(self, video_ids, vid_sub_db, random_reorder_p=0.15):
         assert isinstance(vid_sub_db, VideoFeatSubTokDataset)
         self.vid_sub_db = vid_sub_db
-        if _check_ngpu() > 1:
-            self.ids = video_ids[hvd.rank()::hvd.size()]
-        else:
-            self.ids = video_ids
+        self.ids = video_ids
         self.random_reorder_p = random_reorder_p
 
     def __len__(self):

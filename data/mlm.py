@@ -81,10 +81,7 @@ class VideoMlmDataset(Dataset):
         assert isinstance(vid_sub_db, VideoFeatSubTokDataset)
         self.mask_prob = mask_prob
         self.vid_sub_db = vid_sub_db
-        if _check_ngpu() > 1:
-            self.ids = video_ids[hvd.rank()::hvd.size()]
-        else:
-            self.ids = video_ids
+        self.ids = video_ids
         self.sub_ctx_len = sub_ctx_len
 
     def __len__(self):
