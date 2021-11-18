@@ -21,6 +21,7 @@ from toolz.sandbox import unzip
 import os
 import msgpack
 import msgpack_numpy
+import pandas
 msgpack_numpy.patch()
 
 from utils.distributed import (all_reduce_and_rescale_tensors, all_gather_list,
@@ -79,6 +80,8 @@ class VideoFeatLmdb(object):
         self.txn = self.env.begin(buffers=True)
         if self.name2nframe is None:
             self.name2nframe = self._compute_nframe()
+        self.name2nframe = pandas.Series(
+            self.name2nframe, index=self.name2nframe.keys())
 
     def __getstate__(self):
         state = self.__dict__
@@ -250,6 +253,7 @@ class TxtTokLmdb(object):
                     or isinstance(len_, list) and
                     len_[0] + max(len_[1:]) <= max_txt_len
                 }
+            self.id2len = pandas.Series(self.id2len, index=self.id2len.keys())
         else:
             self.id2len = None
 
@@ -268,10 +272,10 @@ class SubTokLmdb(TxtTokLmdb):
     def __init__(self, db_dir, max_clip_len=-1):
         super().__init__(db_dir, max_txt_len=-1)
         self.max_clip_len = max_clip_len
-        self.vid2max_len = json.load(
-            open(f'{db_dir}/vid2max_frame_sub_len.json'))
-        self.id2len = json.load(
-            open(f'{db_dir}/vid2len.json'))
+        # self.vid2max_len = json.load(  # unused
+        #     open(f'{db_dir}/vid2max_frame_sub_len.json'))
+        self.id2len = json.load(open(f'{db_dir}/vid2len.json'))
+        self.id2len = pandas.Series(self.id2len, index=self.id2len.keys())
         self.vid2dur, self.vid2idx = {}, {}
         video_data_file = f'{db_dir}/vid2dur_idx.json'
         if os.path.exists(video_data_file):
