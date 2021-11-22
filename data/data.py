@@ -162,7 +162,7 @@ class TxtLmdb(object):
             # training
             self.env = lmdb.open(self.db_dir,
                                  readonly=True, create=False,
-                                 max_readers=4096,
+                                 max_readers=4096 * 8,
                                  readahead=False)
             self.txn = self.env.begin(buffers=True)
             self.write_cnt = None
