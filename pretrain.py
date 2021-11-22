@@ -173,6 +173,7 @@ def build_target_loaders(target, tgt_ratio, opts):
                                       collate_fn=train_collate,
                                       sampler=train_sampler,
                                       multiprocessing_context='forkserver',
+                                      persistent_workers=True,
                                       prefetch_factor=prefetch_factor)
             val_sampler = DistributedSampler(val_dset, hvd.size(), 
                 hvd.rank(), shuffle=False) if _check_ngpu() > 1 else None
