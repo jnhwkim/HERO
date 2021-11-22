@@ -165,13 +165,15 @@ def build_target_loaders(target, tgt_ratio, opts):
                 raise ValueError(f'undefined task {task}')
             train_sampler = DistributedSampler(train_dset, hvd.size(), 
                 hvd.rank(), shuffle=True) if _check_ngpu() > 1 else None
+            prefetch_factor = 2 * opts.gradient_accumulation_steps
             train_loader = DataLoader(train_dset,
                                       batch_size=opts.train_batch_size,
                                       num_workers=opts.n_workers,
                                       pin_memory=opts.pin_mem,
                                       collate_fn=train_collate,
                                       sampler=train_sampler,
-                                      multiprocessing_context='forkserver')
+                                      multiprocessing_context='forkserver',
+                                      prefetch_factor=prefetch_factor)
             val_sampler = DistributedSampler(val_dset, hvd.size(), 
                 hvd.rank(), shuffle=False) if _check_ngpu() > 1 else None
             val_loader = DataLoader(val_dset, batch_size=opts.val_batch_size,
@@ -179,7 +181,8 @@ def build_target_loaders(target, tgt_ratio, opts):
                                     pin_memory=opts.pin_mem,
                                     collate_fn=val_collate,
                                     sampler=val_sampler,
-                                    multiprocessing_context='forkserver')
+                                    multiprocessing_context='forkserver',
+                                    prefetch_factor=prefetch_factor)
             train_loaders[name] = (train_loader, ratio)
             val_loaders[name] = PrefetchLoader(val_loader)
     return train_loaders, val_loaders
