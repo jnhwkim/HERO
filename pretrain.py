@@ -255,6 +255,7 @@ def main(opts):
             margin=opts.margin,
             use_all_neg=opts.use_all_neg,
             drop_svmr_prob=opts.drop_svmr_prob)
+    del checkpoint
 
     model.to(device)
     # make sure every process has same model parameters in the beginning
